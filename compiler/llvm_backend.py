@@ -164,10 +164,12 @@ class LLVMBackend(Backend):
         # print("in assstmt")
         # if type(node.value) == BinaryExpr:
         #     print(node.value.operator)
-        print(self.visit(node.value))
-        print(self.func_symtab)
+        # print(self.visit(node.value))
+        # print(self.func_symtab)
         for t in node.targets:
-            print(t.name)
+            print(t.name, end=' ')
+            print(self.visit(node.value), end = ' ')
+            print(node.value)
             alloca = self.func_symtab[-1][t.name]
             self.builder.store(self.visit(node.value), alloca)
         # print(node.value.left.name)
@@ -224,8 +226,9 @@ class LLVMBackend(Backend):
         # print("in binexpr")
         left = self.visit(node.left)
         right = self.visit(node.right)
-        print("left", left)
-        print("right", right)
+        # print("left", left)
+        # print(node.operator)
+        # print("right", right)
         if node.operator in ['+', '-', '*', '%']:
             # print('arithmetic')
             if node.operator == '+':
