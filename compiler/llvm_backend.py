@@ -167,9 +167,9 @@ class LLVMBackend(Backend):
         # print(self.visit(node.value))
         # print(self.func_symtab)
         for t in node.targets:
-            print(t.name, end=' ')
-            print(self.visit(node.value), end = ' ')
-            print(node.value)
+            # print(t.name, end=' ')
+            # print(self.visit(node.value), end = ' ')
+            # print(node.value)
             alloca = self.func_symtab[-1][t.name]
             self.builder.store(self.visit(node.value), alloca)
         # print(node.value.left.name)
@@ -232,19 +232,19 @@ class LLVMBackend(Backend):
         if node.operator in ['+', '-', '*', '%']:
             # print('arithmetic')
             if node.operator == '+':
-                self.builder.add(left, right, self.module.get_unique_name('add_temp'))
+                return self.builder.add(left, right, self.module.get_unique_name('add_temp'))
             elif node.operator == '-':
-                self.builder.sub(left, right, self.module.get_unique_name('sub_temp'))
+                return self.builder.sub(left, right, self.module.get_unique_name('sub_temp'))
             elif node.operator == '*':
-                self.builder.mul(left, right, self.module.get_unique_name('mul_temp'))
+                return self.builder.mul(left, right, self.module.get_unique_name('mul_temp'))
             else:
-                self.builder.srem(left, right, self.module.get_unique_name('mod_temp'))
+                return self.builder.srem(left, right, self.module.get_unique_name('mod_temp'))
         elif node.operator in ['and', 'or']:
             # print('logical')
             if node.operator == 'and':
-                self.builder.and_(left, right, self.module.get_unique_name('and_temp'))
+                return self.builder.and_(left, right, self.module.get_unique_name('and_temp'))
             else:
-                self.builder.or_(left, right, self.module.get_unique_name('or_temp'))
+                return self.builder.or_(left, right, self.module.get_unique_name('or_temp'))
         elif node.operator in ['>', '<', '<=', '>=', '==', '!=']:
             # print('relational')
             return self.builder.icmp_signed(node.operator, left, right, self.module.get_unique_name('icmp_temp'))
