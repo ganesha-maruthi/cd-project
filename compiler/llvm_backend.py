@@ -106,22 +106,119 @@ class LLVMBackend(Backend):
     ##################################
 
     def VarDef(self, node: VarDef):
-        pass
+        '''
+        c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(arg)), bytearray(arg.encode("utf8"))) #creates the c_str_value as a constant
+        c_str = builder.alloca(c_str_val.type) #creation of the allocation of the %".2" variable
+        builder.store(c_str_val, c_str) #store as defined on the next line below %".2"
+        '''
+        # print(self.visit(node.var))
+        # print(self.visit(node.var)['type'] == self._get_llvm_type('int'))
+        ty = self.visit(node.var)['type']
+        if ty == self._get_llvm_type('int'):
+            # self.builder.alloca(self._get_llvm_type('int'), None, self.visit(node.var)['name'])
+            # self._create_alloca(self.visit(node.var)['name'], self._get_llvm_type('int'))
+            # self.builder.store(self.visit(node.value), ir.IntType.as_pointer(self.visit(node.var)['type']), None)
+            # int_val = ir.Constant(self._get_llvm_type('int'), self.visit(node.value))
+            """ int_var = self.builder.alloca(self._get_llvm_type('int'), None, self.visit(node.var)['name'])
+            self.builder.store(self.visit(node.value), int_var) """
+            alloca = self._create_alloca(self.visit(node.var)['name'], self._get_llvm_type('int'))
+            self.builder.store(self.visit(node.value), alloca)
+            self.func_symtab[-1][self.visit(node.var)['name']] = alloca
+        elif ty == self._get_llvm_type('bool'):
+            # self.builder.alloca(self._get_llvm_type('bool'), None, self.visit(node.var)['name'])
+            # self._create_alloca(self.visit(node.var)['name'], self._get_llvm_type('bool'))
+            # self.builder.store(self.visit(node.value), self._get_var_addr(self.visit(node.var)['name']), None)
+            # bool_val = ir.Constant(self._get_llvm_type('bool'), self.visit(node.value))
+            """ bool_var = self.builder.alloca(self._get_llvm_type('bool'), None, self.visit(node.var)['name'])
+            self.builder.store(self.visit(node.value), bool_var) """
+            alloca = self._create_alloca(self.visit(node.var)['name'], self._get_llvm_type('bool'))
+            self.builder.store(self.visit(node.value), alloca)
+            self.func_symtab[-1][self.visit(node.var)['name']] = alloca
+        elif ty == self._get_llvm_type('str'):
+            # str_const = ir.Constant(self._get_llvm_type('str'), self.visit(node.value))
+            # self.builder.alloca(self._get_llvm_type('str'), None, self.visit(node.var)['name'])
+            print(self.visit(node.value))
+            print(self.visit(node.var))
+            print(node.getIdentifier())
+            str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(self.visit(node.value))), bytearray(self.visit(node.value).encode('utf8')))
+            str_var = self.builder.alloca(str_val.type)
+            self.builder.store(str_val, str_var)
+        else:
+            # self.builder.alloca(self._get_llvm_type('<None>'), None, self.visit(node.var)['name'])
+            void_var = self.builder.alloca(self._get_llvm_type('void'), None, self.visit(node.var)['name'])
+            self.builder.store(self.visit(node.value), void_var)
 
     def AssignStmt(self, node: AssignStmt):
-        pass
+        """ for t in node.targets:
+            self.builder.store(node.value, ir.IntType.as_pointer()) """
+        # print("in assgn")
+        # print(self.func_symtab)
+        # print(self.func_symtab[0][node.targets[0].name])
+        # print(self.visit(node.value))
+        print(type(node.value))
+        print(node.value.left.name)
+        if node.value.operator == '+':
+            # self.builder.store(node.value, self.func_symtab[0][node.targets[0].name], None)
+            print(self.visit(node.value.left))
 
     def IfStmt(self, node: IfStmt):
-        pass
+        if_condition = self.builder.append_basic_block(self.module.get_unique_name("if.condition"))
+        if_body = self.builder.append_basic_block(self.module.get_unique_name("if.body"))
+        else_body = self.builder.append_basic_block(self.module.get_unique_name("else.body"))
+        if_else_end = self.builder.append_basic_block(self.module.get_unique_name("if_else.end"))
+
+        self.builder.branch(if_condition)
+
+        with self.builder.goto_block(if_condition):
+            condition = self.visit(node.condition)
+            self.builder.cbranch(condition, if_body, else_body)
+
+        with self.builder.goto_block(if_body):
+            for stmt in node.thenBody:
+                self.visit(stmt)
+            self.builder.branch(if_else_end)
+        
+        with self.builder.goto_block(else_body):
+            for stmt in node.elseBody:
+                self.visit(stmt)
+
+        self.builder.position_at_end(if_else_end)
 
     def WhileStmt(self, node: WhileStmt):
-        pass
+        if self.builder is None:
+            raise Exception("No builder is active")
+
+        bb_condition = self.builder.append_basic_block(self.module.get_unique_name("while.condition"))
+        bb_body = self.builder.append_basic_block(self.module.get_unique_name("while.body"))
+        bb_end = self.builder.append_basic_block(self.module.get_unique_name("while.end"))
+
+        self.builder.branch(bb_condition)
+
+        with self.builder.goto_block(bb_condition):
+            condition = self.visit(node.condition)
+            self.builder.cbranch(condition, bb_body, bb_end)
+
+        with self.builder.goto_block(bb_body):
+            for stmt in node.body:
+                self.visit(stmt)
+            self.builder.branch(bb_condition)
+
+        self.builder.position_at_end(bb_end)
 
     def BinaryExpr(self, node: BinaryExpr) -> Optional[ICMPInstr]:
-        pass
+        print(node.left)
+        if node.operator in ['+', '-', '*', '%']:
+            print('arithmetic')
+        elif node.operator in ['not', 'and', 'or']:
+            print('logical')
+        elif node.operator in ['>', '<', '<=', '>=']:
+            print('relational')
 
     def Identifier(self, node: Identifier) -> LoadInstr:
-        pass
+        print(self.func_symtab[0][node.name])
+        return self.builder.load(self.func_symtab[0][node.name])
+        # print(node.visit(node))
+        # print('in id')
 
     def IfExpr(self, node: IfExpr) -> PhiInstr:
         pass
