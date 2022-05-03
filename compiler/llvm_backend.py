@@ -1,3 +1,4 @@
+from audioop import bias
 from typing import Dict, List, Optional
 
 from llvmlite import binding, ir
@@ -155,11 +156,15 @@ class LLVMBackend(Backend):
         # print(self.func_symtab)
         # print(self.func_symtab[0][node.targets[0].name])
         # print(self.visit(node.value))
-        print(type(node.value))
-        print(node.value.left.name)
-        if node.value.operator == '+':
+        # print(type(node.value))
+        # print("in assstmt")
+        # if type(node.value) == BinaryExpr:
+        #     print(node.value.operator)
+        print(node.value)
+        # print(node.value.left.name)
+        # if node.value.operator == '+':
             # self.builder.store(node.value, self.func_symtab[0][node.targets[0].name], None)
-            print(self.visit(node.value.left))
+            # print(self.visit(node.value.left))
 
     def IfStmt(self, node: IfStmt):
         if_condition = self.builder.append_basic_block(self.module.get_unique_name("if.condition"))
@@ -206,17 +211,35 @@ class LLVMBackend(Backend):
         self.builder.position_at_end(bb_end)
 
     def BinaryExpr(self, node: BinaryExpr) -> Optional[ICMPInstr]:
-        print(node.left)
+        # print(node.left)
+        # print("in binexpr")
+        left = self.visit(node.left)
+        right = self.visit(node.right)
+        # print("left", left)
+        # print("right", right)
         if node.operator in ['+', '-', '*', '%']:
-            print('arithmetic')
-        elif node.operator in ['not', 'and', 'or']:
-            print('logical')
+            # print('arithmetic')
+            if node.operator == '+':
+                self.builder.add(left, right, self.module.get_unique_name('add_temp'))
+            elif node.operator == '-':
+                self.builder.sub(left, right, self.module.get_unique_name('sub_temp'))
+            elif node.operator == '*':
+                self.builder.mul(left, right, self.module.get_unique_name('mul_temp'))
+            else:
+                self.builder.srem(left, right, self.module.get_unique_name('mod_temp'))
+        elif node.operator in ['and', 'or']:
+            # print('logical')
+            if node.operator == 'and':
+                self.builder.and_(left, right, self.module.get_unique_name('and_temp'))
+            else:
+                self.builder.or_(left, right, self.module.get_unique_name('or_temp'))
         elif node.operator in ['>', '<', '<=', '>=']:
-            print('relational')
+            # print('relational')
+            return self.builder.icmp_unsigned(node.operator, left, right, self.module.get_unique_name('icmp_temp'))
 
     def Identifier(self, node: Identifier) -> LoadInstr:
-        print(self.func_symtab[0][node.name])
-        return self.builder.load(self.func_symtab[0][node.name])
+        # print(self.func_symtab[0][node.name])
+        return self.builder.load(self.func_symtab[-1][node.name])
         # print(node.visit(node))
         # print('in id')
 
