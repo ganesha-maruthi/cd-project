@@ -114,7 +114,7 @@ class LLVMBackend(Backend):
         '''
         # print(self.visit(node.var))
         # print(self.visit(node.var)['type'] == self._get_llvm_type('int'))
-        ty = self.visit(node.var)['type']
+        '''ty = self.visit(node.var)['type']
         if ty == self._get_llvm_type('int'):
             # self.builder.alloca(self._get_llvm_type('int'), None, self.visit(node.var)['name'])
             # self._create_alloca(self.visit(node.var)['name'], self._get_llvm_type('int'))
@@ -147,11 +147,15 @@ class LLVMBackend(Backend):
         else:
             # self.builder.alloca(self._get_llvm_type('<None>'), None, self.visit(node.var)['name'])
             void_var = self.builder.alloca(self._get_llvm_type('void'), None, self.visit(node.var)['name'])
-            self.builder.store(self.visit(node.value), void_var)
+            self.builder.store(self.visit(node.value), void_var)'''
+        alloca = self._create_alloca(self.visit(node.var)['name'], self.visit(node.var)['type'])
+        self.builder.store(self.visit(node.value), alloca)
+        self.func_symtab[-1][self.visit(node.var)['name']] = alloca
 
     def AssignStmt(self, node: AssignStmt):
         """ for t in node.targets:
             self.builder.store(node.value, ir.IntType.as_pointer()) """
+            # self.builder.store(self.visit(node.value), alloca)
         # print("in assgn")
         # print(self.func_symtab)
         # print(self.func_symtab[0][node.targets[0].name])
@@ -160,7 +164,12 @@ class LLVMBackend(Backend):
         # print("in assstmt")
         # if type(node.value) == BinaryExpr:
         #     print(node.value.operator)
-        print(node.value)
+        print(self.visit(node.value))
+        print(self.func_symtab)
+        for t in node.targets:
+            print(t.name)
+            alloca = self.func_symtab[-1][t.name]
+            self.builder.store(self.visit(node.value), alloca)
         # print(node.value.left.name)
         # if node.value.operator == '+':
             # self.builder.store(node.value, self.func_symtab[0][node.targets[0].name], None)
@@ -215,8 +224,8 @@ class LLVMBackend(Backend):
         # print("in binexpr")
         left = self.visit(node.left)
         right = self.visit(node.right)
-        # print("left", left)
-        # print("right", right)
+        print("left", left)
+        print("right", right)
         if node.operator in ['+', '-', '*', '%']:
             # print('arithmetic')
             if node.operator == '+':
@@ -233,13 +242,13 @@ class LLVMBackend(Backend):
                 self.builder.and_(left, right, self.module.get_unique_name('and_temp'))
             else:
                 self.builder.or_(left, right, self.module.get_unique_name('or_temp'))
-        elif node.operator in ['>', '<', '<=', '>=']:
+        elif node.operator in ['>', '<', '<=', '>=', '==', '!=']:
             # print('relational')
-            return self.builder.icmp_unsigned(node.operator, left, right, self.module.get_unique_name('icmp_temp'))
+            return self.builder.icmp_signed(node.operator, left, right, self.module.get_unique_name('icmp_temp'))
 
     def Identifier(self, node: Identifier) -> LoadInstr:
         # print(self.func_symtab[0][node.name])
-        return self.builder.load(self.func_symtab[-1][node.name])
+        return self.builder.load(self._get_var_addr(node.name))
         # print(node.visit(node))
         # print('in id')
 
