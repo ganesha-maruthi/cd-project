@@ -107,75 +107,14 @@ class LLVMBackend(Backend):
     ##################################
 
     def VarDef(self, node: VarDef):
-        '''
-        c_str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(arg)), bytearray(arg.encode("utf8"))) #creates the c_str_value as a constant
-        c_str = builder.alloca(c_str_val.type) #creation of the allocation of the %".2" variable
-        builder.store(c_str_val, c_str) #store as defined on the next line below %".2"
-        '''
-        # print(self.visit(node.var))
-        # print(self.visit(node.var)['type'] == self._get_llvm_type('int'))
-        '''ty = self.visit(node.var)['type']
-        if ty == self._get_llvm_type('int'):
-            # self.builder.alloca(self._get_llvm_type('int'), None, self.visit(node.var)['name'])
-            # self._create_alloca(self.visit(node.var)['name'], self._get_llvm_type('int'))
-            # self.builder.store(self.visit(node.value), ir.IntType.as_pointer(self.visit(node.var)['type']), None)
-            # int_val = ir.Constant(self._get_llvm_type('int'), self.visit(node.value))
-            """ int_var = self.builder.alloca(self._get_llvm_type('int'), None, self.visit(node.var)['name'])
-            self.builder.store(self.visit(node.value), int_var) """
-            alloca = self._create_alloca(self.visit(node.var)['name'], self._get_llvm_type('int'))
-            self.builder.store(self.visit(node.value), alloca)
-            self.func_symtab[-1][self.visit(node.var)['name']] = alloca
-        elif ty == self._get_llvm_type('bool'):
-            # self.builder.alloca(self._get_llvm_type('bool'), None, self.visit(node.var)['name'])
-            # self._create_alloca(self.visit(node.var)['name'], self._get_llvm_type('bool'))
-            # self.builder.store(self.visit(node.value), self._get_var_addr(self.visit(node.var)['name']), None)
-            # bool_val = ir.Constant(self._get_llvm_type('bool'), self.visit(node.value))
-            """ bool_var = self.builder.alloca(self._get_llvm_type('bool'), None, self.visit(node.var)['name'])
-            self.builder.store(self.visit(node.value), bool_var) """
-            alloca = self._create_alloca(self.visit(node.var)['name'], self._get_llvm_type('bool'))
-            self.builder.store(self.visit(node.value), alloca)
-            self.func_symtab[-1][self.visit(node.var)['name']] = alloca
-        elif ty == self._get_llvm_type('str'):
-            # str_const = ir.Constant(self._get_llvm_type('str'), self.visit(node.value))
-            # self.builder.alloca(self._get_llvm_type('str'), None, self.visit(node.var)['name'])
-            print(self.visit(node.value))
-            print(self.visit(node.var))
-            print(node.getIdentifier())
-            str_val = ir.Constant(ir.ArrayType(ir.IntType(8), len(self.visit(node.value))), bytearray(self.visit(node.value).encode('utf8')))
-            str_var = self.builder.alloca(str_val.type)
-            self.builder.store(str_val, str_var)
-        else:
-            # self.builder.alloca(self._get_llvm_type('<None>'), None, self.visit(node.var)['name'])
-            void_var = self.builder.alloca(self._get_llvm_type('void'), None, self.visit(node.var)['name'])
-            self.builder.store(self.visit(node.value), void_var)'''
         alloca = self._create_alloca(self.visit(node.var)['name'], self.visit(node.var)['type'])
         self.builder.store(self.visit(node.value), alloca)
         self.func_symtab[-1][self.visit(node.var)['name']] = alloca
 
     def AssignStmt(self, node: AssignStmt):
-        """ for t in node.targets:
-            self.builder.store(node.value, ir.IntType.as_pointer()) """
-            # self.builder.store(self.visit(node.value), alloca)
-        # print("in assgn")
-        # print(self.func_symtab)
-        # print(self.func_symtab[0][node.targets[0].name])
-        # print(self.visit(node.value))
-        # print(type(node.value))
-        # print("in assstmt")
-        # if type(node.value) == BinaryExpr:
-        #     print(node.value.operator)
-        # print(self.visit(node.value))
-        # print(self.func_symtab)
         for t in node.targets:
-            # print(t.name, end=' ')
-            # print(self.visit(node.value), end = ' ')
-            # print(node.value)
             alloca = self.func_symtab[-1][t.name]
             self.builder.store(self.visit(node.value), alloca)
-        # print(node.value.left.name)
-        # if node.value.operator == '+':
-            # self.builder.store(node.value, self.func_symtab[0][node.targets[0].name], None)
-            # print(self.visit(node.value.left))
 
     def IfStmt(self, node: IfStmt):
         if_condition = self.builder.append_basic_block(self.module.get_unique_name("if.condition"))
@@ -223,15 +162,9 @@ class LLVMBackend(Backend):
         self.builder.position_at_end(bb_end)
 
     def BinaryExpr(self, node: BinaryExpr) -> Optional[ICMPInstr]:
-        # print(node.left)
-        # print("in binexpr")
         left = self.visit(node.left)
         right = self.visit(node.right)
-        # print("left", left)
-        # print(node.operator)
-        # print("right", right)
         if node.operator in ['+', '-', '*', '%']:
-            # print('arithmetic')
             if node.operator == '+':
                 return self.builder.add(left, right, self.module.get_unique_name('add_temp'))
             elif node.operator == '-':
@@ -241,48 +174,22 @@ class LLVMBackend(Backend):
             else:
                 return self.builder.srem(left, right, self.module.get_unique_name('mod_temp'))
         elif node.operator in ['and', 'or']:
-            # print('logical')
             if node.operator == 'and':
                 return self.builder.and_(left, right, self.module.get_unique_name('and_temp'))
             else:
                 return self.builder.or_(left, right, self.module.get_unique_name('or_temp'))
         elif node.operator in ['>', '<', '<=', '>=', '==', '!=']:
-            # print('relational')
             return self.builder.icmp_signed(node.operator, left, right, self.module.get_unique_name('icmp_temp'))
 
     def Identifier(self, node: Identifier) -> LoadInstr:
-        # print(self.func_symtab[0][node.name])
         return self.builder.load(self._get_var_addr(node.name))
-        # print(node.visit(node))
-        # print('in id')
 
     def IfExpr(self, node: IfExpr) -> PhiInstr:
-        '''
-        x_lt_y = builder.icmp_signed('<', x, y)
-        with builder.if_else(x_lt_y) as (then, orelse):
-            with then:
-                bb_then = builder.basic_block
-                out_then = builder.sub(y, x, name='out_then')
-            with orelse:
-                bb_orelse = builder.basic_block
-                out_orelse = builder.sub(x, y, name='out_orelse')
-            
-        out_phi = builder.phi(i32)
-        out_phi.add_incoming(out_then, bb_then)
-        out_phi.add_incoming(out_orelse, bb_orelse)
-        '''
-        # print(self.visit(node.condition))
-        # print(self.visit(node.thenExpr))
-        # print(self.visit(node.elseExpr))
         with self.builder.if_else(self.visit(node.condition)) as (then, orelse):
             with then:
                 bb_then = self.builder.basic_block
-                # alloca = self.func_symtab[-1][node.thenExpr.name]
-                # self.builder.store(self.visit(node.value), alloca)
             with orelse:
                 bb_orelse = self.builder.basic_block
-        # print(type(node.thenExpr))
-        # out_phi = self.builder.phi(type(self.func_symtab[-1][node.thenExpr.name]))
 
         out_phi = self.builder.phi(self._get_llvm_type(str(node.thenExpr.inferredType)))
         
@@ -295,50 +202,6 @@ class LLVMBackend(Backend):
             out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_orelse)
         else:
             out_phi.add_incoming(self._get_llvm_type(str(node.elseExpr.inferredType))(node.elseExpr.value), bb_orelse)
-
-        """ if type(node.thenExpr) == Identifier:
-            # if str(self.func_symtab[-1][node.thenExpr.name].type) == 'str':
-            if node.thenExpr.inferredType == bool:
-                out_phi = self.builder.phi(self._get_llvm_type('bool'))
-                out_phi.add_incoming(self.func_symtab[-1][node.thenExpr.name], bb_then)
-            elif node.thenExpr.inferredType == int:
-                out_phi = self.builder.phi(self._get_llvm_type('int'))
-                out_phi.add_incoming(self.func_symtab[-1][node.thenExpr.name], bb_then)
-            else:
-                out_phi = self.builder.phi(self._get_llvm_type('str'))
-                out_phi.add_incoming(self.func_symtab[-1][node.thenExpr.name], bb_then)
-            # print(type(self.func_symtab[-1][node.thenExpr.name].type))
-        else:
-            if type(node.thenExpr) == StringLiteral:
-                out_phi = self.builder.phi(self._get_llvm_type('str')(str(node.thenExpr.value)), bb_orelse)
-            elif type(node.thenExpr) == IntegerLiteral:
-                out_phi = self.builder.phi(self._get_llvm_type('int')(int(node.thenExpr.value)), bb_orelse)
-            else:
-                out_phi = self.builder.phi(self._get_llvm_type('bool')(int(node.thenExpr.value)), bb_orelse)
-
-        if type(node.elseExpr) == Identifier:
-            # if str(self.func_symtab[-1][node.elseExpr.name].type) == 'str':
-            if node.elseExpr.inferredType == bool:
-                out_phi = self.builder.phi(self._get_llvm_type('bool'))
-                out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_then)
-            elif node.elseExpr.inferredType == int:
-                out_phi = self.builder.phi(self._get_llvm_type('int'))
-                out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_then)
-            else:
-                out_phi = self.builder.phi(self._get_llvm_type('str'))
-                out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_then)
-            # print(type(self.func_symtab[-1][node.elseExpr.name].type))
-        else:
-            if type(node.elseExpr) == StringLiteral:
-                out_phi = self.builder.phi(self._get_llvm_type('str')(str(node.elseExpr.value)), bb_orelse)
-            elif type(node.elseExpr) == IntegerLiteral:
-                out_phi = self.builder.phi(self._get_llvm_type('int')(int(node.elseExpr.value)), bb_orelse)
-            else:
-                out_phi = self.builder.phi(self._get_llvm_type('bool')(int(node.elseExpr.value)), bb_orelse) """
-        """ if type(node.elseExpr) == Identifier:
-            out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_orelse)
-        else:
-            out_phi.add_incoming(self._get_llvm_type("bool")(int(node.elseExpr.value)), bb_orelse) """
         return out_phi
 
     ##################################
