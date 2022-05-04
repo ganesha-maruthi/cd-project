@@ -197,6 +197,7 @@ class LLVMBackend(Backend):
         with self.builder.goto_block(else_body):
             for stmt in node.elseBody:
                 self.visit(stmt)
+            self.builder.branch(if_else_end)
 
         self.builder.position_at_end(if_else_end)
 
@@ -256,7 +257,89 @@ class LLVMBackend(Backend):
         # print('in id')
 
     def IfExpr(self, node: IfExpr) -> PhiInstr:
-        pass
+        '''
+        x_lt_y = builder.icmp_signed('<', x, y)
+        with builder.if_else(x_lt_y) as (then, orelse):
+            with then:
+                bb_then = builder.basic_block
+                out_then = builder.sub(y, x, name='out_then')
+            with orelse:
+                bb_orelse = builder.basic_block
+                out_orelse = builder.sub(x, y, name='out_orelse')
+            
+        out_phi = builder.phi(i32)
+        out_phi.add_incoming(out_then, bb_then)
+        out_phi.add_incoming(out_orelse, bb_orelse)
+        '''
+        # print(self.visit(node.condition))
+        # print(self.visit(node.thenExpr))
+        # print(self.visit(node.elseExpr))
+        with self.builder.if_else(self.visit(node.condition)) as (then, orelse):
+            with then:
+                bb_then = self.builder.basic_block
+                # alloca = self.func_symtab[-1][node.thenExpr.name]
+                # self.builder.store(self.visit(node.value), alloca)
+            with orelse:
+                bb_orelse = self.builder.basic_block
+        # print(type(node.thenExpr))
+        # out_phi = self.builder.phi(type(self.func_symtab[-1][node.thenExpr.name]))
+
+        out_phi = self.builder.phi(self._get_llvm_type(str(node.thenExpr.inferredType)))
+        
+        if type(node.thenExpr) == Identifier:
+            out_phi.add_incoming(self.func_symtab[-1][node.thenExpr.name], bb_then)
+        else:
+            out_phi.add_incoming(self._get_llvm_type(str(node.thenExpr.inferredType))(node.thenExpr.value), bb_then)
+
+        if type(node.elseExpr) == Identifier:
+            out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_orelse)
+        else:
+            out_phi.add_incoming(self._get_llvm_type(str(node.elseExpr.inferredType))(node.elseExpr.value), bb_orelse)
+
+        """ if type(node.thenExpr) == Identifier:
+            # if str(self.func_symtab[-1][node.thenExpr.name].type) == 'str':
+            if node.thenExpr.inferredType == bool:
+                out_phi = self.builder.phi(self._get_llvm_type('bool'))
+                out_phi.add_incoming(self.func_symtab[-1][node.thenExpr.name], bb_then)
+            elif node.thenExpr.inferredType == int:
+                out_phi = self.builder.phi(self._get_llvm_type('int'))
+                out_phi.add_incoming(self.func_symtab[-1][node.thenExpr.name], bb_then)
+            else:
+                out_phi = self.builder.phi(self._get_llvm_type('str'))
+                out_phi.add_incoming(self.func_symtab[-1][node.thenExpr.name], bb_then)
+            # print(type(self.func_symtab[-1][node.thenExpr.name].type))
+        else:
+            if type(node.thenExpr) == StringLiteral:
+                out_phi = self.builder.phi(self._get_llvm_type('str')(str(node.thenExpr.value)), bb_orelse)
+            elif type(node.thenExpr) == IntegerLiteral:
+                out_phi = self.builder.phi(self._get_llvm_type('int')(int(node.thenExpr.value)), bb_orelse)
+            else:
+                out_phi = self.builder.phi(self._get_llvm_type('bool')(int(node.thenExpr.value)), bb_orelse)
+
+        if type(node.elseExpr) == Identifier:
+            # if str(self.func_symtab[-1][node.elseExpr.name].type) == 'str':
+            if node.elseExpr.inferredType == bool:
+                out_phi = self.builder.phi(self._get_llvm_type('bool'))
+                out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_then)
+            elif node.elseExpr.inferredType == int:
+                out_phi = self.builder.phi(self._get_llvm_type('int'))
+                out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_then)
+            else:
+                out_phi = self.builder.phi(self._get_llvm_type('str'))
+                out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_then)
+            # print(type(self.func_symtab[-1][node.elseExpr.name].type))
+        else:
+            if type(node.elseExpr) == StringLiteral:
+                out_phi = self.builder.phi(self._get_llvm_type('str')(str(node.elseExpr.value)), bb_orelse)
+            elif type(node.elseExpr) == IntegerLiteral:
+                out_phi = self.builder.phi(self._get_llvm_type('int')(int(node.elseExpr.value)), bb_orelse)
+            else:
+                out_phi = self.builder.phi(self._get_llvm_type('bool')(int(node.elseExpr.value)), bb_orelse) """
+        """ if type(node.elseExpr) == Identifier:
+            out_phi.add_incoming(self.func_symtab[-1][node.elseExpr.name], bb_orelse)
+        else:
+            out_phi.add_incoming(self._get_llvm_type("bool")(int(node.elseExpr.value)), bb_orelse) """
+        return out_phi
 
     ##################################
     #      END OF IMPLEMENTATION     #
